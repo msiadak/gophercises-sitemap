@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -12,8 +13,6 @@ import (
 
 	link "github.com/msiadak/gophercises-link"
 )
-
-const maxDepth = 3
 
 type URL struct {
 	XMLName xml.Name `xml:"url"`
@@ -36,7 +35,7 @@ func (us *urlSorter) Swap(i, j int) {
 	us.URLs[i], us.URLs[j] = us.URLs[j], us.URLs[i]
 }
 
-func CrawlPageBFS(domain string, path string, sitemap map[string]bool, depth int) error {
+func CrawlPageBFS(domain string, path string, sitemap map[string]bool, depth int, maxDepth int) error {
 	fmt.Printf("Crawling '%s'", path)
 	domainURL, err := url.Parse(domain)
 	if err != nil {
@@ -73,7 +72,7 @@ func CrawlPageBFS(domain string, path string, sitemap map[string]bool, depth int
 	}
 
 	for _, u := range toCrawl {
-		err := CrawlPageBFS(domain, u, sitemap, depth+1)
+		err := CrawlPageBFS(domain, u, sitemap, depth+1, maxDepth)
 		if err != nil {
 			return err
 		}
@@ -83,7 +82,12 @@ func CrawlPageBFS(domain string, path string, sitemap map[string]bool, depth int
 }
 
 func main() {
-	urlString := os.Args[1]
+	var maxDepth int
+	flag.IntVar(&maxDepth, "depth", 3, "Number of links from the root URL to travel")
+	var urlString string
+	flag.StringVar(&urlString, "url", "", "URL to generate a sitemap for")
+
+	flag.Parse()
 
 	rootURL, err := url.Parse(urlString)
 	if err != nil {
@@ -93,7 +97,7 @@ func main() {
 	sitemap := make(map[string]bool)
 	sitemap[rootURL.String()] = true
 
-	err = CrawlPageBFS(rootURL.String(), rootURL.String(), sitemap, 0)
+	err = CrawlPageBFS(rootURL.String(), rootURL.String(), sitemap, 0, maxDepth)
 	if err != nil {
 		log.Fatalf("Couldn't crawl URL: '%s'\n%s", rootURL, err)
 	}
